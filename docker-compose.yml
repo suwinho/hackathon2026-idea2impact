@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  ai-service:
+    build: ./ai-python
+    networks:
+      - backend-net
+    restart: always
+
+  backend:
+    build: ./backend-spring
+    ports:
+      - "8080:8080"
+    environment:
+      - AI_URL=http://ai-service:5000
+      - SPRING_PROFILES_ACTIVE=prod
+    depends_on:
+      - ai-service
+    networks:
+      - frontend-net
+      - backend-net
+    restart: always
+
+  frontend:
+    build: ./frontend-react
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - frontend-net
+    restart: always
+
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    internal: true
