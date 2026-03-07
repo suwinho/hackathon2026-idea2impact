@@ -14,4 +14,10 @@ public class RegistrationDTO {
     private String telefon;
     private String miasto;
     private String rodzajLokum;
+
+    private Boolean czyMialKota;
+    private Boolean czyMaInneZwierzeta;
+    private Boolean czyZgadzaSieNaWizyte;
+    private Boolean czyWszyscyDomownicyZgodni;
+    private Boolean czyDomBezpieczny;
 }
