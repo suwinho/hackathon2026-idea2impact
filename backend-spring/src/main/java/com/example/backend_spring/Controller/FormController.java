@@ -30,20 +30,24 @@ public class FormController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegistrationDTO dto) {
-        UserData details = new UserData();
-        details.setImie(dto.getImie());
-        details.setNazwisko(dto.getNazwisko());
-        details.setDataUrodzenia(dto.getDataUrodzenia());
-        details.setTelefon(dto.getTelefon());
-        details.setMiasto(dto.getMiasto());
-        details.setRodzajLokum(dto.getRodzajLokum());
+        try {
+            UserData details = new UserData();
+            details.setImie(dto.getImie());
+            details.setNazwisko(dto.getNazwisko());
+            details.setDataUrodzenia(dto.getDataUrodzenia());
+            details.setTelefon(dto.getTelefon());
+            details.setMiasto(dto.getMiasto());
+            details.setRodzajLokum(dto.getRodzajLokum());
 
-        User user = new User();
-        user.setEmail(dto.getEmail());
-        user.setPassword(dto.getPassword());
-        user.setUserData(details);
+            User user = new User();
+            user.setEmail(dto.getEmail());
+            user.setPassword(dto.getPassword());
+            user.setUserData(details);
 
-        User saved = userRepository.save(user);
-        return ResponseEntity.ok(Map.of("id", saved.getId()));
+            User saved = userRepository.save(user);
+            return ResponseEntity.ok(Map.of("id", saved.getId()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Konto z tym adresem email już istnieje lub dane są nieprawidłowe."));
+        }
     }
 }
