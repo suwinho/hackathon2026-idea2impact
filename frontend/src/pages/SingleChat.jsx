@@ -3,6 +3,13 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import './SingleChat.css';
 
+const STARTING_QUESTIONS = [
+  { text: "Cześć! Czy będziesz się ze mną często bawić? (energiczny)", keyword: "energiczny ruchliwy" },
+  { text: "A czy będzie Ci przeszkadzać, jeżeli będę drapać meble? (drapie_meble)", keyword: "drapie meble" },
+  { text: "Czy w przyszłości będę mieć kociego kolegę? (towarzyski)", keyword: "towarzyski kocie przyjaźnie" },
+  { text: "Czy masz dla mnie dużo czasu? (dużo_czasu)", keyword: "lubi pieszczoty dużo czasu kontakt z człowiekiem" }
+];
+
 const SingleChat = () => {
   const { cat_id } = useParams();
   const location = useLocation();
@@ -13,6 +20,11 @@ const SingleChat = () => {
   const [showOptions, setShowOptions] = useState(false);
   const [chatEnded, setChatEnded] = useState(false);
   
+  // States for survey
+  const [surveyMode, setSurveyMode] = useState(false);
+  const [surveyStep, setSurveyStep] = useState(0);
+  const [surveyAnswers, setSurveyAnswers] = useState([]);
+
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -108,6 +120,12 @@ const SingleChat = () => {
         }]);
         setChatEnded(true);
       }, 1500);
+    } else if (option === 'Adopcja stała') {
+      // Rozpocznij ankietę
+      setTimeout(() => {
+        setSurveyMode(true);
+        askSurveyQuestion(0);
+      }, 1000);
     } else {
       setTimeout(() => {
          setMessages(prev => [...prev, {
@@ -118,6 +136,92 @@ const SingleChat = () => {
          }]);
          setChatEnded(true);
       }, 1500);
+    }
+  };
+
+  const askSurveyQuestion = (stepIndex) => {
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      sender: 'cat',
+      type: 'text',
+      content: STARTING_QUESTIONS[stepIndex].text
+    }]);
+    setShowOptions(true);
+  };
+
+  const handleSurveyAnswer = (answerBool) => {
+    setShowOptions(false);
+    
+    // Zapisz odpowiedź do UI (Tak/Nie)
+    const textAnswer = answerBool ? 'Tak' : 'Nie';
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      sender: 'user',
+      type: 'text',
+      content: textAnswer
+    }]);
+
+    // Zapisz odpowiedź do cache
+    const newAnswers = [...surveyAnswers, { index_pytania: surveyStep, odpowiedz: answerBool }];
+    setSurveyAnswers(newAnswers);
+
+    const nextStep = surveyStep + 1;
+    if (nextStep < STARTING_QUESTIONS.length) {
+      setSurveyStep(nextStep);
+      setTimeout(() => {
+        askSurveyQuestion(nextStep);
+      }, 1000);
+    } else {
+      // Koniec pytań
+      setTimeout(() => {
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          sender: 'cat',
+          type: 'text',
+          content: 'Dziękuję za wszystkie odpowiedzi! Twoje preferencje zostały przeanalizowane. 😺'
+        }]);
+        setChatEnded(true);
+        sendSurveyData(newAnswers);
+      }, 1000);
+    }
+  };
+
+  const sendSurveyData = async (answersPayload) => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+
+    try {
+      const response = await fetch('/api_py/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: parseInt(userId, 10),
+          cat_id: parseInt(cat_id, 10),
+          odpowiedzi: answersPayload
+            .filter(a => a.odpowiedz)
+            .map(a => STARTING_QUESTIONS[a.index_pytania].keyword)
+            .join(' ')
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const matchPercent = data.match_percentage || 0;
+        
+        // Show the match percentage in the chat
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            id: Date.now(),
+            sender: 'cat',
+            type: 'text',
+            content: `Nasze dopasowanie wynosi: ${matchPercent}%! 🐾`
+          }]);
+        }, 1500);
+      } else {
+        console.error('Błąd z backendu AI:', response.status);
+      }
+    } catch (err) {
+      console.error('Błąd wysyłania wyników ankiety na AI backend:', err);
     }
   };
 
@@ -151,9 +255,18 @@ const SingleChat = () => {
 
         {showOptions && !chatEnded && (
           <div className="chat-options-area">
-            <button onClick={() => handleOptionSelect('Adopcja wirtualna')} className="chat-option-btn">Adopcja wirtualna</button>
-            <button onClick={() => handleOptionSelect('Dom tymczasowy')} className="chat-option-btn">Dom tymczasowy</button>
-            <button onClick={() => handleOptionSelect('Adopcja stała')} className="chat-option-btn">Adopcja stała</button>
+            {!surveyMode ? (
+              <>
+                <button onClick={() => handleOptionSelect('Adopcja wirtualna')} className="chat-option-btn">Adopcja wirtualna</button>
+                <button onClick={() => handleOptionSelect('Dom tymczasowy')} className="chat-option-btn">Dom tymczasowy</button>
+                <button onClick={() => handleOptionSelect('Adopcja stała')} className="chat-option-btn">Adopcja stała</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => handleSurveyAnswer(true)} className="chat-option-btn" style={{backgroundColor: '#e6f9ed', borderColor: '#2ed573'}}>Tak</button>
+                <button onClick={() => handleSurveyAnswer(false)} className="chat-option-btn" style={{backgroundColor: '#ffeaa7', borderColor: '#ffa502'}}>Nie</button>
+              </>
+            )}
           </div>
         )}
         
