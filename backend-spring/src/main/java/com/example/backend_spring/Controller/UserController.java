@@ -32,4 +32,9 @@ public class UserController {
                 .map(user -> ResponseEntity.ok(Map.of("id", user.getId())))
                 .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
+
+    @org.springframework.web.bind.annotation.GetMapping("/all")
+    public java.util.List<com.example.backend_spring.model.User> getAllUsers() {
+        return userRepository.findAll();
+    }
 }
