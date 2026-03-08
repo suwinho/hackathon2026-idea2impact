@@ -47,6 +47,30 @@ public class UserMatchController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    @DeleteMapping("/{userId}/match/{catId}")
+    @Transactional
+    public ResponseEntity<?> undoMatchCat(@PathVariable Long userId, @PathVariable Long catId) {
+        return userRepository.findById(userId).map(user -> {
+            if (user.getMatchedCatIds() != null) {
+                user.getMatchedCatIds().remove(catId);
+                userRepository.save(user);
+            }
+            return ResponseEntity.ok("Cofnięto match kota o ID: " + catId);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{userId}/reject/{catId}")
+    @Transactional
+    public ResponseEntity<?> undoRejectCat(@PathVariable Long userId, @PathVariable Long catId) {
+        return userRepository.findById(userId).map(user -> {
+            if (user.getRejectedCatIds() != null) {
+                user.getRejectedCatIds().remove(catId);
+                userRepository.save(user);
+            }
+            return ResponseEntity.ok("Cofnięto odrzucenie kota o ID: " + catId);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/{userId}/discover")
     @Transactional
     public ResponseEntity<List<Cat>> getDiscoverableCats(@PathVariable Long userId) {
