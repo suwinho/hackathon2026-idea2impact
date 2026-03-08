@@ -191,3 +191,36 @@
   background: #ccc;
   border-radius: 3px;
 }
+
+/* Adoption share image */
+.adoption-share-image {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.adoption-share-image img {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.download-share-btn {
+  display: inline-block;
+  text-align: center;
+  background: linear-gradient(135deg, #2ed573, #7bed9f);
+  color: white;
+  padding: 0.7rem 1.2rem;
+  border-radius: 25px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(46, 213, 115, 0.3);
+}
+
+.download-share-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(46, 213, 115, 0.4);
+}
