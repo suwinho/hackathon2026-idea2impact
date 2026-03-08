@@ -7,6 +7,8 @@ const Home = () => {
   const [cats, setCats] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [showMatch, setShowMatch] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [swipedCats, setSwipedCats] = useState(new Set());
   const userHasCat = localStorage.getItem('posiadaKota') === 'true';
   const userId = localStorage.getItem('userId');
 
@@ -63,56 +65,88 @@ const Home = () => {
     () => Array(cats.length).fill(0).map(() => React.createRef()),
     [cats.length]
   );
+  
+  const canSwipe = useRef(true);
 
-  const handleSwipeButton = async (dir) => {
-    if (currentIndex >= 0 && cats[currentIndex]) {
-      const targetCat = cats[currentIndex];
-      
-      // Try to animate the card via ref if it works
-      if (childRefs[currentIndex]?.current) {
-        try {
-          await childRefs[currentIndex].current.swipe(dir);
-        } catch(e) {
-             console.error('Błąd biblioteki SWIPE:', e);
-        }
-      }
-
-      // Manually trigger the backend call and unmounting logic
-      swiped(dir, targetCat, currentIndex, true);
+  const handleSwipeButton = (dir) => {
+    if (canSwipe.current && currentIndex >= 0 && childRefs[currentIndex]?.current) {
+      canSwipe.current = false;
+      // Wywołanie animacji natywnej paczki - zero zmian stanu w React podczas lotu!
+      childRefs[currentIndex].current.swipe(dir);
     }
   };
 
-  const swiped = async (direction, cat, index, isProgrammatic = false) => {
-    setCurrentIndex(index - 1);
-    
-    // forcefully remove the cat from screen if swiped programmatically
-    // timeout allows the library animation to play
-    setTimeout(() => {
-      setCats(prev => prev.filter(c => c.id !== cat.id));
-    }, 200);
+  const handleCardLeftScreen = async (direction, cat, index) => {
+    // Karta wyleciała poza kadr, można bezpiecznie zaktualizować stan Reacta
+    setCurrentIndex(prev => prev - 1);
+    canSwipe.current = true;
+
+    // Jak karta wyjdzie poza ekran, oznaczamy ją jako swiped (schowana z DOM, ale ref zostaje)
+    setSwipedCats(prev => {
+      const newSet = new Set(prev);
+      newSet.add(cat.id);
+      return newSet;
+    });
+
+    // Zapisz w historii by muc użyć "Cofnij"
+    setHistory(prev => [...prev, { cat, direction, index }]);
 
     if (!userId) {
       console.warn("Brak zalogowanego userId w localStorage - działania nie zostaną zapisane w bazie!");
+      return;
     }
 
     if (direction === 'right') {
       setShowMatch(true);
       setTimeout(() => setShowMatch(false), 2000);
-      
-        try {
-          await fetch(`/api/users/${userId}/match/${cat.id}`, { method: 'POST' });
-          console.log(`Match na kotku ${cat.imie} wysłany do backendu!`);
-        } catch (err) {
-          console.error('Błąd podczas wysyłania matcha:', err);
-        }
+      try {
+        await fetch(`/api/users/${userId}/match/${cat.id}`, { method: 'POST' });
+        console.log(`Match na kotku ${cat.imie} wszedł!`);
+      } catch (err) {
+        console.error('Błąd match:', err);
+      }
     } else if (direction === 'left') {
-      if (userId) {
-        try {
-          await fetch(`/api/users/${userId}/reject/${cat.id}`, { method: 'POST' });
-          console.log(`Odrzucenie kotka ${cat.imie} wysłane do backendu.`);
-        } catch (err) {
-          console.error('Błąd podczas odrzucania:', err);
-        }
+      try {
+        await fetch(`/api/users/${userId}/reject/${cat.id}`, { method: 'POST' });
+        console.log(`Odrzucenie kotka ${cat.imie} wpadło!`);
+      } catch (err) {
+        console.error('Błąd reject:', err);
+      }
+    }
+  };
+
+  const handleUndo = async () => {
+    if (history.length === 0) return;
+
+    // Pop the last swiped card from history container
+    const newHistory = [...history];
+    const lastAction = newHistory.pop();
+    setHistory(newHistory);
+
+    // Aktualizujemy główny indeks i pokazujemy z powrotem kartę zanim się "przywróci"
+    setCurrentIndex(lastAction.index);
+    canSwipe.current = true;
+    setSwipedCats(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(lastAction.cat.id);
+      return newSet;
+    });
+
+    // Trzeba chwileczkę zaczekać aby DOM objawił kartę z display:block z powrotem by móc odegrać animację wlotu
+    setTimeout(async () => {
+      if (childRefs[lastAction.index]?.current) {
+        await childRefs[lastAction.index].current.restoreCard();
+      }
+    }, 50);
+
+    // Send undo request to the Backend Database
+    if (userId) {
+      try {
+        const endpoint = lastAction.direction === 'right' ? 'match' : 'reject';
+        await fetch(`/api/users/${userId}/${endpoint}/${lastAction.cat.id}`, { method: 'DELETE' });
+        console.log(`Cofnięto: ${lastAction.cat.imie}`);
+      } catch (err) {
+        console.error('Błąd podczas cofania:', err);
       }
     }
   };
@@ -123,26 +157,35 @@ const Home = () => {
         <div className="card-container">
           {cats.length === 0 && <h2 className="no-cats">Brak kotów spełniających kryteria... 😿</h2>}
           {cats.map((cat, index) => (
-            <TinderCard 
-              ref={childRefs[index]}
-              className="swipe" 
-              key={cat.id} 
-              onSwipe={(dir) => swiped(dir, cat, index)}
-              preventSwipe={['up', 'down']}
-            >
-              <div className="card" style={{ backgroundImage: 'url(' + (cat.zdjecie_url || 'https://placekitten.com/g/400/600') + ')' }}>
-                <div className="card-info">
-                  <h3>{cat.imie || 'Nieznany cat'} <span>{cat.wiek} lat</span></h3>
-                  <p>{cat.opis || 'Piękny kociak szukający domu.'}</p>
+            <div key={cat.id} style={{ display: swipedCats.has(cat.id) ? 'none' : 'block' }}>
+              <TinderCard 
+                ref={childRefs[index]}
+                className="swipe" 
+                onCardLeftScreen={(dir) => handleCardLeftScreen(dir, cat, index)}
+                preventSwipe={['up', 'down']}
+              >
+                <div className="card" style={{ backgroundImage: 'url(' + (cat.zdjecie_url || 'https://placekitten.com/g/400/600') + ')' }}>
+                  <div className="card-info">
+                    <h3>{cat.imie || 'Nieznany cat'} <span>{cat.wiek} lat</span></h3>
+                    <p>{cat.opis || 'Piękny kociak szukający domu.'}</p>
+                  </div>
                 </div>
-              </div>
-            </TinderCard>
+              </TinderCard>
+            </div>
           ))}
           
           {cats.length > 0 && (
             <div className="swipe-buttons">
               <button className="swipe-btn reject" onClick={() => handleSwipeButton('left')} aria-label="Odrzuć">
                 ✕
+              </button>
+              <button 
+                className="swipe-btn undo" 
+                onClick={handleUndo} 
+                disabled={history.length === 0} 
+                aria-label="Cofnij"
+              >
+                ↺
               </button>
               <button className="swipe-btn match" onClick={() => handleSwipeButton('right')} aria-label="Zmatchuj">
                 ❤️
