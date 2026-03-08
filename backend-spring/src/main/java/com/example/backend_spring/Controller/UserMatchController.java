@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @RestController
 @RequestMapping("/api/users")
 @CrossOrigin(origins = "*")
@@ -24,6 +26,7 @@ public class UserMatchController {
     private CatRepository catRepository;
 
     @PostMapping("/{userId}/match/{catId}")
+    @Transactional
     public ResponseEntity<?> matchCat(@PathVariable Long userId, @PathVariable Long catId) {
         return userRepository.findById(userId).map(user -> {
             user.getMatchedCatIds().add(catId);
@@ -34,6 +37,7 @@ public class UserMatchController {
     }
 
     @PostMapping("/{userId}/reject/{catId}")
+    @Transactional
     public ResponseEntity<?> rejectCat(@PathVariable Long userId, @PathVariable Long catId) {
         return userRepository.findById(userId).map(user -> {
             user.getRejectedCatIds().add(catId);
@@ -44,16 +48,32 @@ public class UserMatchController {
     }
 
     @GetMapping("/{userId}/discover")
+    @Transactional
     public ResponseEntity<List<Cat>> getDiscoverableCats(@PathVariable Long userId) {
+        System.out.println("DISCOVER CALLED FOR ID: " + userId);
+        boolean exists = userRepository.existsById(userId);
+        System.out.println("USER EXISTS CHECK: " + exists);
+
         return userRepository.findById(userId).map(user -> {
-            Set<Long> seenIds = user.getMatchedCatIds();
-            seenIds.addAll(user.getRejectedCatIds());
+            Set<Long> seenIds = new java.util.HashSet<>();
+            if (user.getMatchedCatIds() != null) seenIds.addAll(user.getMatchedCatIds());
+            if (user.getRejectedCatIds() != null) seenIds.addAll(user.getRejectedCatIds());
 
             List<Cat> discoveryList = catRepository.findAll().stream()
                     .filter(cat -> !seenIds.contains(cat.getId()))
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(discoveryList);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{userId}/match")
+    @Transactional
+    public ResponseEntity<List<Cat>> getMatchedCats(@PathVariable Long userId) {
+        return userRepository.findById(userId).map(user -> {
+            Set<Long> matchedIds = user.getMatchedCatIds();
+            List<Cat> matchedCats = catRepository.findAllById(matchedIds);
+            return ResponseEntity.ok(matchedCats);
         }).orElse(ResponseEntity.notFound().build());
     }
 }
