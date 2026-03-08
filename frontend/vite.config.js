@@ -7,6 +7,11 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
     proxy: {
+      '/api_py': {
+        target: 'http://ai-service:8000',
+        changeOrigin: true,
+        secure: false,
+      },
       '/api': {
         target: 'http://backend:8080',
         changeOrigin: true,
