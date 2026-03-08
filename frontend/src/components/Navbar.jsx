@@ -19,6 +19,10 @@ const Navbar = () => {
         <Link to={userId ? "/home" : "/"}>
           <img src="/trzymajsiekocie.png" alt="Trzymaj się kocie logo" className="logo-img" />
         </Link>
+        <span className="navbar-collab">
+          <span className="x-text">x</span> 
+          <img src="/logo.jpg" alt="CatLy Logo" className="catly-logo-img" />
+        </span>
       </div>
       <div className="navbar-center">
         <a href="https://www.trzymajsiekocie.com" target="_blank" rel="noopener noreferrer">TrzymajSieKocie</a>

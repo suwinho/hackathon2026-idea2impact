@@ -154,7 +154,10 @@ const Home = () => {
   return (
     <div className="home-container">
       <Navbar />
-        <div className="card-container">
+      <div className="home-collab-text">
+        <span className="catly-text">CatLy</span> <span className="x-text">x</span> <span className="tsk-text">TrzymajSieKocie</span>
+      </div>
+      <div className="card-container">
           {cats.length === 0 && <h2 className="no-cats">Brak kotów spełniających kryteria... 😿</h2>}
           {cats.map((cat, index) => (
             <div key={cat.id} style={{ display: swipedCats.has(cat.id) ? 'none' : 'block' }}>

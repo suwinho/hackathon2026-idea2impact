@@ -283,6 +283,135 @@ const SingleChat = () => {
     }
   };
 
+  const generateAdoptionImage = (catData, matchPercent) => {
+    return new Promise((resolve) => {
+      const W = 400, H = 476;
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, W, H);
+      gradient.addColorStop(0, '#7BD4F7');
+      gradient.addColorStop(0.5, '#a8e6ff');
+      gradient.addColorStop(1, '#7BD4F7');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, W, H);
+
+      // White card
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      const cardX = 16, cardY = 12, cardW = W - 32, cardH = H - 24, cardR = 16;
+      ctx.beginPath();
+      ctx.moveTo(cardX + cardR, cardY);
+      ctx.lineTo(cardX + cardW - cardR, cardY);
+      ctx.quadraticCurveTo(cardX + cardW, cardY, cardX + cardW, cardY + cardR);
+      ctx.lineTo(cardX + cardW, cardY + cardH - cardR);
+      ctx.quadraticCurveTo(cardX + cardW, cardY + cardH, cardX + cardW - cardR, cardY + cardH);
+      ctx.lineTo(cardX + cardR, cardY + cardH);
+      ctx.quadraticCurveTo(cardX, cardY + cardH, cardX, cardY + cardH - cardR);
+      ctx.lineTo(cardX, cardY + cardR);
+      ctx.quadraticCurveTo(cardX, cardY, cardX + cardR, cardY);
+      ctx.closePath();
+      ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      const drawTexts = () => {
+        // Cat name
+        ctx.fillStyle = '#333'; ctx.font = 'bold 22px Arial, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(catData.imie || 'Kotek', W / 2, 230);
+
+        // "znalazłem dom!" text
+        ctx.fillStyle = '#2ed573'; ctx.font = 'bold 20px Arial, sans-serif';
+        ctx.fillText('Ktoś chce mnie adoptować! ❤', W / 2, 260);
+
+        // Match percentage
+        ctx.fillStyle = '#7BD4F7'; ctx.font = 'bold 18px Arial, sans-serif';
+        ctx.fillText(`Dopasowanie: ${matchPercent}%`, W / 2, 285);
+      };
+
+      let imagesLoaded = 0;
+      const totalImages = 3;
+      const checkDone = () => {
+        imagesLoaded++;
+        if (imagesLoaded >= totalImages) {
+          resolve(canvas.toDataURL('image/png'));
+        }
+      };
+
+      // Load cat photo via fetch->blob to avoid CORS tainted canvas
+      const originalCatUrl = catData.zdjecie_url || 'https://placekitten.com/g/200/200';
+      // Use corsproxy to bypass strict CORS blocking from original domains
+      const catUrl = `https://corsproxy.io/?${encodeURIComponent(originalCatUrl)}`;
+      
+      fetch(catUrl)
+        .then(res => res.blob())
+        .then(blob => {
+          const blobUrl = URL.createObjectURL(blob);
+          const catImg = new Image();
+          catImg.onload = () => {
+            const cx = W / 2, cy = 130, cr = 70;
+            ctx.save();
+            ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
+            const aspect = catImg.width / catImg.height;
+            let sx = 0, sy = 0, sw = catImg.width, sh = catImg.height;
+            if (aspect > 1) { sx = (catImg.width - catImg.height) / 2; sw = catImg.height; }
+            else { sy = (catImg.height - catImg.width) / 2; sh = catImg.width; }
+            ctx.drawImage(catImg, sx, sy, sw, sh, cx - cr, cy - cr, cr * 2, cr * 2);
+            ctx.restore();
+            ctx.strokeStyle = '#7BD4F7'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(cx, cy, cr + 2, 0, Math.PI * 2); ctx.stroke();
+            drawTexts();
+            URL.revokeObjectURL(blobUrl);
+            checkDone();
+          };
+          catImg.onerror = () => {
+            URL.revokeObjectURL(blobUrl);
+            ctx.fillStyle = '#eee';
+            ctx.beginPath(); ctx.arc(W / 2, 130, 70, 0, Math.PI * 2); ctx.fill();
+            drawTexts();
+            checkDone();
+          };
+          catImg.src = blobUrl;
+        })
+        .catch(() => {
+          ctx.fillStyle = '#eee';
+          ctx.beginPath(); ctx.arc(W / 2, 130, 70, 0, Math.PI * 2); ctx.fill();
+          drawTexts();
+          checkDone();
+        });
+
+      // Load logo (top-left)
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      logoImg.onload = () => {
+        const lw = 60, lh = (logoImg.height / logoImg.width) * lw;
+        ctx.drawImage(logoImg, W - lw - 24, 20, lw, lh);
+        checkDone();
+      };
+      logoImg.onerror = () => {
+        ctx.fillStyle = '#333'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'right';
+        ctx.fillText('TrzymajSięKocie', W - 24, 40);
+        checkDone();
+      };
+      logoImg.src = '/trzymajsiekocie.png';
+
+      // Load QR code (bottom area)
+      const qrImg = new Image();
+      qrImg.crossOrigin = 'anonymous';
+      qrImg.onload = () => {
+        const qrSize = 130;
+        ctx.drawImage(qrImg, W / 2 - qrSize / 2, 305, qrSize, qrSize);
+        ctx.fillStyle = '#888'; ctx.font = '11px Arial'; ctx.textAlign = 'center';
+        ctx.fillText('Zeskanuj i pomóż!', W / 2, 450);
+        checkDone();
+      };
+      qrImg.onerror = checkDone;
+      qrImg.src = '/TrzymajSieKocieQR.jpeg';
+    });
+  };
+
   const handleAdoptionAnswer = (answer) => {
     setShowOptions(false);
     setAdoptionAskMode(false);
@@ -294,26 +423,44 @@ const SingleChat = () => {
       content: answer ? 'Tak' : 'Nie'
     }]);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       if (answer) {
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
           sender: 'cat',
           type: 'text',
-          content: 'To cudownie! 😻 Twoje odpowiedzi zostały przesłane do naszej fundacji. Wkrótce się z Tobą skontaktują. Czekam na Ciebie! ❤️'
+          content: 'To cudownie! \ud83d\ude3b Twoje odpowiedzi zosta\u0142y przes\u0142ane do naszej fundacji. Wkr\u00f3tce si\u0119 z Tob\u0105 skontaktuj\u0105. Czekam na Ciebie! \u2764\ufe0f'
         }, {
           id: Date.now() + 2,
           sender: 'cat',
           type: 'link',
           content: 'https://trzymajsiekocie.pl/adopcja/'
         }]);
-        submitAdoptionForm('Adopcja stała', lastMatchPercent);
+        submitAdoptionForm('Adopcja sta\u0142a', lastMatchPercent);
+
+        // Generate and display the adoption share image
+        try {
+          const imageDataUrl = await generateAdoptionImage(cat, lastMatchPercent);
+          setMessages(prev => [...prev, {
+            id: Date.now() + 3,
+            sender: 'cat',
+            type: 'text',
+            content: 'Podziel si\u0119 t\u0105 wspania\u0142\u0105 wiadomo\u015bci\u0105! \ud83c\udf89'
+          }, {
+            id: Date.now() + 4,
+            sender: 'cat',
+            type: 'adoption-image',
+            content: imageDataUrl
+          }]);
+        } catch (err) {
+          console.error('B\u0142\u0105d generowania obrazka adopcji:', err);
+        }
       } else {
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
           sender: 'cat',
           type: 'text',
-          content: 'Rozumiem, nic na siłę! 🐾 Jeśli zmienisz zdanie, zawsze tu na Ciebie czekam. Dziękuję za poświęcony czas! ❤️'
+          content: 'Rozumiem, nic na si\u0142\u0119! \ud83d\udc3e Je\u015bli zmienisz zdanie, zawsze tu na Ciebie czekam. Dzi\u0119kuj\u0119 za po\u015bwi\u0119cony czas! \u2764\ufe0f'
         }]);
       }
       setChatEnded(true);
@@ -342,6 +489,14 @@ const SingleChat = () => {
                 {msg.type === 'text' && <p>{msg.content}</p>}
                 {msg.type === 'image' && <img src={msg.content} alt="Cat sent" className="chat-img-attachment" />}
                 {msg.type === 'link' && <a href={msg.content} target="_blank" rel="noopener noreferrer" className="chat-link">{msg.content}</a>}
+                {msg.type === 'adoption-image' && (
+                  <div className="adoption-share-image">
+                    <img src={msg.content} alt="Adopcja" style={{width: '100%', borderRadius: '12px'}} />
+                    <a href={msg.content} download={`adopcja_${cat?.imie || 'kot'}.png`} className="download-share-btn">
+                      📥 Pobierz i udostępnij
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           ))}

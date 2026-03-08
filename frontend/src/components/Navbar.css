@@ -16,6 +16,32 @@
   flex: 1;
   display: flex;
   justify-content: flex-start;
+  align-items: center;
+}
+
+.navbar-collab {
+  margin-left: 8px;
+  font-weight: 800;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-collab .x-text {
+  color: #aaa;
+  margin-right: 6px;
+  font-size: 0.95rem;
+}
+
+.catly-logo-img {
+  height: 48px;
+  width: 48px;
+  object-fit: contain;
+  margin-right: 6px;
+}
+
+.navbar-collab .catly-text {
+  color: #7BD4F7;
 }
 
 .navbar-logo a {
