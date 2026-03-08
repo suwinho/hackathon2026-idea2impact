@@ -24,9 +24,8 @@ public class UserData {
     private String miasto;
     private String rodzajLokum;
 
-    private Boolean czyMialKota;
-    private Boolean czyMaInneZwierzeta;
-    private Boolean czyZgadzaSieNaWizyte;
-    private Boolean czyWszyscyDomownicyZgodni;
-    private Boolean czyDomBezpieczny;
+    private Boolean energiczny;     
+    private Boolean drapieMeble;    
+    private Boolean towarzyski;    
+    private Boolean duzoCzasu;
 }
