@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import './Chat.css';
 
@@ -47,7 +48,9 @@ const Chat = () => {
                 <img src={cat.zdjecie_url || 'https://placekitten.com/g/200/200'} alt={cat.imie} />
                 <div className="match-details">
                   <h3>{cat.imie}</h3>
-                  <button className="chat-btn">Rozpocznij konwersację</button>
+                  <Link to={`/chat/${cat.id}`} state={{ cat }} style={{ textDecoration: 'none' }}>
+                    <button className="chat-btn">Rozpocznij konwersację</button>
+                  </Link>
                 </div>
               </div>
             ))}
