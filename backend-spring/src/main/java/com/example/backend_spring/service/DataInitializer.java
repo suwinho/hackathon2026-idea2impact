@@ -6,12 +6,17 @@ import com.example.backend_spring.repository.CatRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
+
 import com.example.backend_spring.repository.AdminRepository;
 import java.util.List;
 
 @Configuration
 public class DataInitializer {
-
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
     @Bean
     CommandLineRunner initDatabase(CatRepository repository, AdminRepository adminRepository) {
         return args -> {
