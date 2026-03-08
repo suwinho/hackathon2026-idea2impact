@@ -2,6 +2,8 @@ package com.example.backend_spring;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.client.RestTemplate;
 
 @SpringBootApplication
 public class BackendSpringApplication {
@@ -10,4 +12,8 @@ public class BackendSpringApplication {
 		SpringApplication.run(BackendSpringApplication.class, args);
 	}
 
+	@Bean
+	public RestTemplate restTemplate() {
+		return new RestTemplate();
+	}
 }

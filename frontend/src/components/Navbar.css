@@ -1,6 +1,5 @@
 .navbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
   background-color: rgba(255, 255, 255, 0.9);
@@ -11,6 +10,12 @@
   right: 0;
   z-index: 1000;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.navbar-logo {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .navbar-logo a {
@@ -24,18 +29,74 @@
   object-fit: contain;
 }
 
-.navbar-links {
+.navbar-center {
+  flex: 2;
   display: flex;
-  gap: 1.5rem;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
 }
 
-.navbar-links a {
+.navbar-right {
+  flex: 1.1; /* Push center elements slightly left / Zwiększony flex by zepchnąć środek w lewo */
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.navbar-center a {
   text-decoration: none;
   color: #333;
   font-weight: 500;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
-.navbar-links a:hover {
+.navbar-center a:hover {
   color: #7BD4F7;
+}
+
+.navbar-center a.active-link {
+  color: #7BD4F7;
+  font-weight: 700;
+}
+
+.navbar-center a.active-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #7BD4F7;
+  border-radius: 2px;
+}
+
+.auth-btn {
+  background-color: transparent;
+  color: #333;
+  font-family: inherit;
+  font-weight: 600;
+  border: 1px solid rgba(123, 212, 247, 0.5); /* Lekka obwódka / light outline */
+  padding: 0.4rem 1.2rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  margin-left: 10px;
+}
+
+.auth-btn:hover {
+  background-color: #7BD4F7;
+  color: #222;
+}
+
+.logout-btn {
+  border-color: rgba(255, 71, 87, 0.5); /* Lekka czerwona obwódka */
+  color: #ff4757;
+}
+
+.logout-btn:hover {
+  background-color: #ff4757;
+  color: white;
 }
