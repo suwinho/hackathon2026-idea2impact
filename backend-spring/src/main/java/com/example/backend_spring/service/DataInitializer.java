@@ -1,18 +1,19 @@
 package com.example.backend_spring.service;
 
+import com.example.backend_spring.model.Admin;
 import com.example.backend_spring.model.Cat;
 import com.example.backend_spring.repository.CatRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
+import com.example.backend_spring.repository.AdminRepository;
 import java.util.List;
 
 @Configuration
 public class DataInitializer {
 
     @Bean
-    CommandLineRunner initDatabase(CatRepository repository) {
+    CommandLineRunner initDatabase(CatRepository repository, AdminRepository adminRepository) {
         return args -> {
             if (repository.count() == 0) {
                 
@@ -59,6 +60,15 @@ public class DataInitializer {
                 System.out.println("✅ Seeding zakończony: Dodano koty do bazy danych.");
             } else {
                 System.out.println("ℹ️ Baza danych zawiera już dane, pomijam seeding.");
+            }
+            if (adminRepository.count() == 0) {
+                Admin defaultAdmin = new Admin();
+                defaultAdmin.setUsername("admin");
+                defaultAdmin.setPassword("admin123"); // Login: admin, Hasło: admin123
+                defaultAdmin.setFullName("Administrator Systemu");
+                
+                adminRepository.save(defaultAdmin);
+                System.out.println("🚀 Konto administratora utworzone: admin / admin123");
             }
         };
     }
