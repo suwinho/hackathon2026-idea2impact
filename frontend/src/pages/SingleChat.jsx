@@ -4,10 +4,10 @@ import Navbar from '../components/Navbar';
 import './SingleChat.css';
 
 const STARTING_QUESTIONS = [
-  { text: "Cześć! Czy będziesz się ze mną często bawić? (energiczny)", keyword: "energiczny ruchliwy" },
-  { text: "A czy będzie Ci przeszkadzać, jeżeli będę drapać meble? (drapie_meble)", keyword: "drapie meble" },
-  { text: "Czy w przyszłości będę mieć kociego kolegę? (towarzyski)", keyword: "towarzyski kocie przyjaźnie" },
-  { text: "Czy masz dla mnie dużo czasu? (dużo_czasu)", keyword: "lubi pieszczoty dużo czasu kontakt z człowiekiem" }
+  { text: "Cześć! Czy będziesz się ze mną często bawić?", keyword: "energiczny ruchliwy" },
+  { text: "A czy będzie Ci przeszkadzać, jeżeli będę drapać meble?", keyword: "drapie meble" },
+  { text: "Czy w przyszłości będę mieć kociego kolegę?", keyword: "towarzyski kocie przyjaźnie" },
+  { text: "Czy masz dla mnie dużo czasu?", keyword: "lubi pieszczoty dużo czasu kontakt z człowiekiem" }
 ];
 
 const SingleChat = () => {
@@ -24,6 +24,8 @@ const SingleChat = () => {
   const [surveyMode, setSurveyMode] = useState(false);
   const [surveyStep, setSurveyStep] = useState(0);
   const [surveyAnswers, setSurveyAnswers] = useState([]);
+  const [adoptionAskMode, setAdoptionAskMode] = useState(false);
+  const [lastMatchPercent, setLastMatchPercent] = useState(0);
 
   const messagesEndRef = useRef(null);
 
@@ -126,15 +128,16 @@ const SingleChat = () => {
         setSurveyMode(true);
         askSurveyQuestion(0);
       }, 1000);
-    } else {
+    } else if (option === 'Dom tymczasowy') {
       setTimeout(() => {
          setMessages(prev => [...prev, {
             id: Date.now() + 1,
             sender: 'cat',
             type: 'text',
-            content: `Super! Mój wolontariusz wkrótce się z Tobą skontaktuje w sprawie opcji "${option}". Miau! 🐾`
+            content: `Super! Mój wolontariusz wkrótce się z Tobą skontaktuje w sprawie domu tymczasowego. Miau! 🐾`
          }]);
          setChatEnded(true);
+         submitAdoptionForm('Dom tymczasowy', null);
       }, 1500);
     }
   };
@@ -180,7 +183,6 @@ const SingleChat = () => {
           type: 'text',
           content: 'Dziękuję za wszystkie odpowiedzi! Twoje preferencje zostały przeanalizowane. 😺'
         }]);
-        setChatEnded(true);
         sendSurveyData(newAnswers);
       }, 1000);
     }
@@ -207,6 +209,7 @@ const SingleChat = () => {
       if (response.ok) {
         const data = await response.json();
         const matchPercent = data.match_percentage || 0;
+        setLastMatchPercent(matchPercent);
         
         // Show the match percentage in the chat
         setTimeout(() => {
@@ -216,6 +219,19 @@ const SingleChat = () => {
             type: 'text',
             content: `Nasze dopasowanie wynosi: ${matchPercent}%! 🐾`
           }]);
+          // Ask adoption question after showing match
+          setTimeout(() => {
+            setMessages(prev => [...prev, {
+              id: Date.now() + 1,
+              sender: 'cat',
+              type: 'text',
+              content: `Czy rozważasz moją adopcję? 🥺❤️`
+            }]);
+            setSurveyMode(false);
+            setAdoptionAskMode(true);
+            setChatEnded(false);
+            setShowOptions(true);
+          }, 2000);
         }, 1500);
       } else {
         console.error('Błąd z backendu AI:', response.status);
@@ -223,6 +239,85 @@ const SingleChat = () => {
     } catch (err) {
       console.error('Błąd wysyłania wyników ankiety na AI backend:', err);
     }
+  };
+
+  const submitAdoptionForm = async (adoptionType, matchPercent) => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+
+    try {
+      // Fetch user details from backend
+      const userRes = await fetch(`/api/users/${userId}`);
+      let userData = {};
+      if (userRes.ok) {
+        const user = await userRes.json();
+        userData = user.userData || {};
+      }
+
+      const odpowiedziStr = surveyAnswers
+        .map((a, idx) => `${STARTING_QUESTIONS[idx]?.text || `Pytanie ${idx}`}: ${a.odpowiedz ? 'Tak' : 'Nie'}`)
+        .join('; ');
+
+      const formData = {
+        userId: parseInt(userId, 10),
+        catId: parseInt(cat_id, 10),
+        catName: cat?.imie || '',
+        adoptionType: adoptionType,
+        imie: userData.imie || '',
+        nazwisko: userData.nazwisko || '',
+        email: '',
+        telefon: userData.telefon || '',
+        miasto: userData.miasto || '',
+        rodzajLokum: userData.rodzajLokum || '',
+        odpowiedzi: odpowiedziStr,
+        matchPercentage: matchPercent || 0
+      };
+
+      await fetch('/api/forms/adoption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+    } catch (err) {
+      console.error('Błąd wysyłania formularza adopcji:', err);
+    }
+  };
+
+  const handleAdoptionAnswer = (answer) => {
+    setShowOptions(false);
+    setAdoptionAskMode(false);
+    
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      sender: 'user',
+      type: 'text',
+      content: answer ? 'Tak' : 'Nie'
+    }]);
+
+    setTimeout(() => {
+      if (answer) {
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          sender: 'cat',
+          type: 'text',
+          content: 'To cudownie! 😻 Twoje odpowiedzi zostały przesłane do naszej fundacji. Wkrótce się z Tobą skontaktują. Czekam na Ciebie! ❤️'
+        }, {
+          id: Date.now() + 2,
+          sender: 'cat',
+          type: 'link',
+          content: 'https://trzymajsiekocie.pl/adopcja/'
+        }]);
+        submitAdoptionForm('Adopcja stała', lastMatchPercent);
+      } else {
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          sender: 'cat',
+          type: 'text',
+          content: 'Rozumiem, nic na siłę! 🐾 Jeśli zmienisz zdanie, zawsze tu na Ciebie czekam. Dziękuję za poświęcony czas! ❤️'
+        }]);
+      }
+      setChatEnded(true);
+    }, 1000);
   };
 
   if (!cat) return <div className="loading-chat">Ładowanie...</div>;
@@ -255,16 +350,21 @@ const SingleChat = () => {
 
         {showOptions && !chatEnded && (
           <div className="chat-options-area">
-            {!surveyMode ? (
+            {adoptionAskMode ? (
+              <>
+                <button onClick={() => handleAdoptionAnswer(true)} className="chat-option-btn" style={{backgroundColor: '#e6f9ed', borderColor: '#2ed573'}}>Tak, chcę adoptować! 😻</button>
+                <button onClick={() => handleAdoptionAnswer(false)} className="chat-option-btn" style={{backgroundColor: '#ffeaa7', borderColor: '#ffa502'}}>Nie, jeszcze nie teraz</button>
+              </>
+            ) : surveyMode ? (
+              <>
+                <button onClick={() => handleSurveyAnswer(true)} className="chat-option-btn" style={{backgroundColor: '#e6f9ed', borderColor: '#2ed573'}}>Tak</button>
+                <button onClick={() => handleSurveyAnswer(false)} className="chat-option-btn" style={{backgroundColor: '#ffeaa7', borderColor: '#ffa502'}}>Nie</button>
+              </>
+            ) : (
               <>
                 <button onClick={() => handleOptionSelect('Adopcja wirtualna')} className="chat-option-btn">Adopcja wirtualna</button>
                 <button onClick={() => handleOptionSelect('Dom tymczasowy')} className="chat-option-btn">Dom tymczasowy</button>
                 <button onClick={() => handleOptionSelect('Adopcja stała')} className="chat-option-btn">Adopcja stała</button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => handleSurveyAnswer(true)} className="chat-option-btn" style={{backgroundColor: '#e6f9ed', borderColor: '#2ed573'}}>Tak</button>
-                <button onClick={() => handleSurveyAnswer(false)} className="chat-option-btn" style={{backgroundColor: '#ffeaa7', borderColor: '#ffa502'}}>Nie</button>
               </>
             )}
           </div>

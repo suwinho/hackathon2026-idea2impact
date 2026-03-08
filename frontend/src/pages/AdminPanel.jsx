@@ -12,7 +12,8 @@ const AdminPanel = () => {
 
   // Stan dla panelu zarządzania
   const [cats, setCats] = useState([]);
-  const [activeTab, setActiveTab] = useState('add'); // 'add' or 'remove'
+  const [adoptionForms, setAdoptionForms] = useState([]);
+  const [activeTab, setActiveTab] = useState('add'); // 'add', 'remove', or 'forms'
   
   // Stan dla dodawania kota
   const [newCat, setNewCat] = useState({
@@ -27,6 +28,7 @@ const AdminPanel = () => {
   useEffect(() => {
     if (isAdminLoggedIn) {
       fetchCats();
+      fetchAdoptionForms();
     }
   }, [isAdminLoggedIn]);
 
@@ -39,6 +41,18 @@ const AdminPanel = () => {
       }
     } catch (err) {
       console.error('Błąd pobierania kotów:', err);
+    }
+  };
+
+  const fetchAdoptionForms = async () => {
+    try {
+      const response = await fetch('/api/forms/adoption');
+      if (response.ok) {
+        const data = await response.json();
+        setAdoptionForms(data);
+      }
+    } catch (err) {
+      console.error('Błąd pobierania formularzy:', err);
     }
   };
 
@@ -121,6 +135,21 @@ const AdminPanel = () => {
     }
   };
 
+  const handleRemoveForm = async (id) => {
+    if (!window.confirm('Czy na pewno chcesz usunąć ten formularz?')) return;
+    try {
+      const response = await fetch(`/api/forms/adoption/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        alert('Formularz usunięty!');
+        fetchAdoptionForms();
+      } else {
+        alert('Błąd podczas usuwania formularza.');
+      }
+    } catch (err) {
+      alert('Błąd serwera.');
+    }
+  };
+
   if (!isAdminLoggedIn) {
     return (
       <div className="admin-login-container">
@@ -169,6 +198,12 @@ const AdminPanel = () => {
           onClick={() => setActiveTab('remove')}
         >
           Lista / Usuwanie Kotów
+        </button>
+        <button 
+          className={activeTab === 'forms' ? 'active-tab' : ''} 
+          onClick={() => { setActiveTab('forms'); fetchAdoptionForms(); }}
+        >
+          Formularze adopcyjne
         </button>
       </div>
 
@@ -235,6 +270,50 @@ const AdminPanel = () => {
                         <button className="admin-delete-btn" onClick={() => handleRemoveCat(cat.id, cat.imie)}>
                           Usuń profil
                         </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'forms' && (
+          <div className="admin-cat-list">
+            <h3>Formularze adopcyjne ({adoptionForms.length})</h3>
+            {adoptionForms.length === 0 ? <p>Brak formularzów adopcyjnych.</p> : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Typ adopcji</th>
+                    <th>Kot</th>
+                    <th>Imię</th>
+                    <th>Nazwisko</th>
+                    <th>Miasto</th>
+                    <th>Telefon</th>
+                    <th>Odpowiedzi</th>
+                    <th>Dopasowanie</th>
+                    <th>Data</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adoptionForms.map(form => (
+                    <tr key={form.id}>
+                      <td>{form.id}</td>
+                      <td><span className={`badge ${form.adoptionType === 'Adopcja sta\u0142a' ? 'badge-green' : 'badge-yellow'}`}>{form.adoptionType}</span></td>
+                      <td>{form.catName} (ID: {form.catId})</td>
+                      <td>{form.imie || '-'}</td>
+                      <td>{form.nazwisko || '-'}</td>
+                      <td>{form.miasto || '-'}</td>
+                      <td>{form.telefon || '-'}</td>
+                      <td className="answers-cell">{form.odpowiedzi || '-'}</td>
+                      <td>{form.matchPercentage}%</td>
+                      <td>{form.createdAt ? new Date(form.createdAt).toLocaleString('pl-PL') : '-'}</td>
+                      <td>
+                        <button className="admin-delete-btn" onClick={() => handleRemoveForm(form.id)}>Usuń</button>
                       </td>
                     </tr>
                   ))}

@@ -37,4 +37,11 @@ public class UserController {
     public java.util.List<com.example.backend_spring.model.User> getAllUsers() {
         return userRepository.findAll();
     }
+
+    @org.springframework.web.bind.annotation.GetMapping("/{id}")
+    public ResponseEntity<?> getUserById(@org.springframework.web.bind.annotation.PathVariable Long id) {
+        return userRepository.findById(id)
+                .map(user -> ResponseEntity.ok(user))
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
